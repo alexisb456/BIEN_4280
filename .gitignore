@@ -1,0 +1,17 @@
+# macOS files
+.DS_Store
+
+# Mbed build files
+BUILD/
+*/BUILD/
+
+# Compiled files
+*.bin
+*.hex
+*.elf
+*.o
+
+# IDE/editor files
+.vscode/
+.idea/
+
