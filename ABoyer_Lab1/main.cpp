@@ -8,6 +8,7 @@ at different speeds based on the severity of an error.
 #include "mbed.h"
 #include <Mail.h>
 #include <cstdint>
+#include "USBSerial.h"
 
 //register addresses
 #define P0_OUTSET  ((uint32_t*) 0x50000508)
