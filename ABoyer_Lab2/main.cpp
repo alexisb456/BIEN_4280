@@ -15,15 +15,16 @@ typedef struct {
     float dutyCycle; //stores desired duty cycles 
 } PWM;
 
-/*
-Queue and mempool for all Part 2
+
+//Queue and mempool for all Part 2
 //queue holding up to 9 pointers
 Queue<PWM, 9> pwm_queue;
 
 //create memory pool that provide memory for queue items
 MemoryPool<PWM, 9> pwm_mem;
-*/ 
 
+
+/*
 //seperate queues for part 3 
 Queue<PWM, 9>vanilla_queue;
 Queue<PWM, 9>chocolate_queue;
@@ -33,12 +34,22 @@ Queue<PWM, 9>strawberry_queue;
 MemoryPool<PWM, 9>vanilla_mem;
 MemoryPool<PWM, 9>chocolate_mem;
 MemoryPool<PWM, 9>strawberry_mem;
+*/
+
+//Define ticker 
+Ticker vanilla_ticker;
 
 //threads created
 Thread producer_thread;
 Thread vanilla_thread; 
 Thread chocolate_thread; 
 Thread strawberry_thread;
+
+//define global variables
+volatile int pwmCounter = 0;
+
+volatile int vanillaDutycycle = 33;
+
 
 /*
 Producer for part 2
@@ -70,7 +81,7 @@ void producer(){
 }
 */
 
-/*
+
 //producer for Part 2a
 void producer(){
 
@@ -82,7 +93,7 @@ void producer(){
 
         //vanilla at 1/3rd brightness 
         //to test can also different brightness at 10 and 90
-        message->dutyCycle = 33;
+        message->dutyCycle = 90;
 
         //place message into the queue
         if(!pwm_queue.try_put(message)){
@@ -90,7 +101,7 @@ void producer(){
         }
     }
 }
-*/
+
 
 /*
 //Producer for Part 2b
@@ -133,6 +144,7 @@ void producer() {
 }
 */
 
+/*
 //Producer for part 3
 void producer() {
 
@@ -218,44 +230,46 @@ void producer() {
 
     }
 }
-/*
+*/
+
+
+void vanilla_tick(){
+
+ if(pwmCounter < vanillaDutycycle){
+     //turn green on 
+     *P0_OUTCLR = GREEN_LED;
+ }
+ else {
+     //Green LED off
+     *P0_OUTSET = GREEN_LED;
+ }
+
+ pwmCounter++;
+
+ if(pwmCounter >= 100){
+     pwmCounter = 0;
+ }
+}
+
 void vanilla(){
 
-    //pointer to recieve a PWM message from queue
     PWM *message;
 
-    //keep consumer running 
-    while(true) {
+    vanilla_ticker.attach(&vanilla_tick, 100us);
 
-        //wait for duty cycle message
-        pwm_queue.try_get(&message);
+    while(true){
         
-        //duty cycle value copied from message
-        int dutyCycle = message->dutyCycle;
+        //check queue
+        if(pwm_queue.try_get(&message)){
 
-        //return memory
-        pwm_mem.free(message);
+            //save requested duty cycle
+            vanillaDutycycle = message->dutyCycle;
 
-        //10ms PWM period (100Hz)
-        int period_us = 10000;
-
-        //how long LED should remain on
-        int on_time = (period_us * dutyCycle) / 100;
-        
-        //how long LED should remain off
-        int off_time = period_us - on_time;
-
-        //produce PWM until another value
-        while(true) {
-
-            //Green LED on
-            *P0_OUTCLR = GREEN_LED;
-            wait_us(on_time);
-
-            //Green LED off
-            *P0_OUTSET = GREEN_LED;
-            wait_us(off_time);
+            //return message memory to Memory pool
+            pwm_mem.free(message);
         }
+
+        ThisThread::sleep_for(1ms);
     }
 }
 
@@ -368,7 +382,7 @@ void strawberry() {
 
             // Convert percentage to PWM value
             pwmValue =
-                (uint16_t)((dutyCycle / 100.0f) * 10000);
+                (uint16_t)((dutyCycle / 100.0) * 10000);
 
             // PWM polarity bit for the low-active LED
             pwmValue |= 0x8000;
@@ -381,8 +395,9 @@ void strawberry() {
         }
     }
 }
-*/
 
+
+/*
 void vanilla_part_3(){
     PWM *message;
 
@@ -541,7 +556,9 @@ void strawberry_part_3() {
         }
     }
 }
-/*
+*/
+
+
 //Main for Part 2a
 // main() runs in its own thread in the OS
 int main()
@@ -558,7 +575,7 @@ int main()
         ThisThread::sleep_for(1s);
     }
 }
-*/
+
 
 /*
 //Main for Part 2b
@@ -587,6 +604,7 @@ int main()
 }
 */
 
+/*
 //Main for Part 3
 int main(){
     //Green LED 
@@ -603,3 +621,4 @@ int main(){
         ThisThread::sleep_for(1s);
     }
 }
+*/
