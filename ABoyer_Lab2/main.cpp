@@ -15,16 +15,16 @@ typedef struct {
     float dutyCycle; //stores desired duty cycles 
 } PWM;
 
-
+/*
 //Queue and mempool for all Part 2
 //queue holding up to 9 pointers
 Queue<PWM, 9> pwm_queue;
 
 //create memory pool that provide memory for queue items
 MemoryPool<PWM, 9> pwm_mem;
+*/
 
 
-/*
 //seperate queues for part 3 
 Queue<PWM, 9>vanilla_queue;
 Queue<PWM, 9>chocolate_queue;
@@ -34,7 +34,7 @@ Queue<PWM, 9>strawberry_queue;
 MemoryPool<PWM, 9>vanilla_mem;
 MemoryPool<PWM, 9>chocolate_mem;
 MemoryPool<PWM, 9>strawberry_mem;
-*/
+
 
 //Define ticker 
 Ticker vanilla_ticker;
@@ -49,6 +49,8 @@ Thread strawberry_thread;
 volatile int pwmCounter = 0;
 
 volatile int vanillaDutycycle = 33;
+
+volatile int vanillaDutycycle_part3 = 10;
 
 
 /*
@@ -81,7 +83,7 @@ void producer(){
 }
 */
 
-
+/*
 //producer for Part 2a
 void producer(){
 
@@ -101,7 +103,7 @@ void producer(){
         }
     }
 }
-
+*/
 
 /*
 //Producer for Part 2b
@@ -144,7 +146,7 @@ void producer() {
 }
 */
 
-/*
+
 //Producer for part 3
 void producer() {
 
@@ -230,9 +232,10 @@ void producer() {
 
     }
 }
-*/
 
 
+/*
+//ticker for part 2a
 void vanilla_tick(){
 
  if(pwmCounter < vanillaDutycycle){
@@ -250,7 +253,28 @@ void vanilla_tick(){
      pwmCounter = 0;
  }
 }
+*/
 
+//ticker for part 3
+void vanilla_tick(){
+
+    if(pwmCounter < vanillaDutycycle_part3){
+        //turn green on 
+         *P0_OUTCLR = GREEN_LED;
+    }
+    else {
+      //Green LED off
+         *P0_OUTSET = GREEN_LED;
+     }
+
+    pwmCounter++;
+
+    if(pwmCounter >= 100){
+         pwmCounter = 0;
+    }
+}
+
+/*
 void vanilla(){
 
     PWM *message;
@@ -395,17 +419,14 @@ void strawberry() {
         }
     }
 }
+*/
 
 
-/*
 void vanilla_part_3(){
     PWM *message;
 
-    //default the green brightness before first message
-    int dutyCycle = 10;
-
-    //PWM period
-    int period_us = 10000;
+    //start ticker 
+    vanilla_ticker.attach(&vanilla_tick, 100us);
 
    while(true){
 
@@ -413,24 +434,14 @@ void vanilla_part_3(){
        if(vanilla_queue.try_get(&message)){
 
            //save new green duty cycle
-           dutyCycle = message->dutyCycle;
+           vanillaDutycycle_part3 = message->dutyCycle;
 
+           //return memory to pool 
            vanilla_mem.free(message);
        }
 
-        //how long the green should be on 
-       int on_time = (period_us * dutyCycle) / 100;
-
-        //how long the green should be off
-       int off_time = period_us - on_time;
-
-       //Green on
-       *P0_OUTCLR = GREEN_LED;
-       wait_us(on_time);
-
-       //Green off
-       *P0_OUTSET = GREEN_LED;
-       wait_us(off_time);
+       //allow other threads to run 
+       ThisThread::sleep_for(1ms);
    }
 }
 
@@ -441,6 +452,9 @@ void chocolate_part_3(){
 
     //create pointer to receive messages
     PWM *message;
+
+    //set PWM period
+     blue.period_us(10000);
 
     //keep consumer running 
     while (true) {
@@ -454,8 +468,6 @@ void chocolate_part_3(){
             //return memory
             chocolate_mem.free(message);
 
-            //set PWM period
-            blue.period_us(10000);
 
             //convert percentage 
             blue.write(1.0 - (dutyCycle / 100.0));
@@ -554,11 +566,13 @@ void strawberry_part_3() {
                 NRF_PWM_TASK_SEQSTART0
             );
         }
+
+        ThisThread::sleep_for(1ms);
     }
 }
-*/
 
 
+/*
 //Main for Part 2a
 // main() runs in its own thread in the OS
 int main()
@@ -575,7 +589,7 @@ int main()
         ThisThread::sleep_for(1s);
     }
 }
-
+*/
 
 /*
 //Main for Part 2b
@@ -604,7 +618,7 @@ int main()
 }
 */
 
-/*
+
 //Main for Part 3
 int main(){
     //Green LED 
@@ -621,4 +635,3 @@ int main(){
         ThisThread::sleep_for(1s);
     }
 }
-*/
