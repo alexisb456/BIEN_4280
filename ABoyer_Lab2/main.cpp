@@ -318,7 +318,7 @@ void chocolate(){
             pwm_mem.free(message);
 
             //set PWM period
-            blue.period_us(10000);
+            blue.period_ms(10);
 
             //convert percentage 
             blue.write(1.0 - (dutyCycle / 100.0));
@@ -454,7 +454,7 @@ void chocolate_part_3(){
     PWM *message;
 
     //set PWM period
-     blue.period_us(10000);
+     blue.period_ms(10);
 
     //keep consumer running 
     while (true) {
