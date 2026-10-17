@@ -1,6 +1,15 @@
 /*
 Author: ALEXIS BOYER
 Date: 10/06/2026
+
+Program uses Arduino Nano 33 BLE Sense to measure temperature and humidiyt
+using the HS3000 Sensor. It uses I2C communication to request and receive 
+sensor data, converts raw measurements into temperature and humidity values,
+and displays results through USBSerial 
+
+Ticker ISR alternates between temperature adn humidity threads usng EventFlags. 
+Mutexes are uses to protec the shared USBSerial and I2C resources. 
+LEDs used to indicate what measurement is being taken. 
 */
 #include "mbed.h"
 #include "USBSerial.h"
@@ -44,7 +53,7 @@ Mutex mutex;
 Mutex I2C_mutex; 
 
 /*
-Part 2 Code 
+//Part 2 Code 
 void ISR_sensor(){
     static bool humidity_status = true;
 
@@ -111,17 +120,48 @@ int main()
 }
 */
 
-//Calibrate the humidity 
+
+//Part 3
+/*Calibrate the humidity 
+Converts the raw humidity data into relative humidity using equation from 
+the HS3000 datasheet
+
+input: raw_humidity - 14-bit raw humidity measurement
+Output: the calculated relative humdity as an int
+*/
 int calculate_humidity(uint32_t raw_humidity){
     return(raw_humidity * 100) / 16383; 
 }
 
-//Calibrate temperature 
+
+/*Calibrate temperature 
+Converts the raw temperature data into temperature in celcius using equation from 
+the HS3000 datasheet
+
+Input: raw_temperature - 14 bit raw temperature measurement 
+output: the calculated temperature in degress celsius as an integer
+*/
 int calculate_temerature(uint32_t raw_temperature){
     return(raw_temperature * 165) / 16383 - 40; 
 }
 
-//read temperatue and humidty from the sensor 
+/*read temperatue and humidty from the sensor 
+Communicates with the HS3000 sensor using I2C to request adn retrieve temperature and 
+humidity measurements. Locks the I2C mutex to prevent simultaneous acces. Sens a measurment request
+waits, and reads four bytes of sensor data. 
+Checks the sensor status bits and extracts the raw temperature and humidity values using bitwise 
+operations. Raw values converted using calculation functions. 
+
+Inputs: 
+humidity - reference variable used to stroe the calculated humidity
+temperature- reference varaible used to stro the calculated temperature
+
+Output: 
+returns the value true if valid sensor data was received and converted successfully, or false if 
+communcation failed. 
+
+Humidity and temperature only updated with succesfyl measurements.
+*/
 bool read_sensor(int &humidity, int &temperature){
     //create array to hold data
     char data[4];
@@ -174,7 +214,14 @@ bool read_sensor(int &humidity, int &temperature){
     return true; 
 }
 
+/* ISR Sensor
+ISR triggered by the ticker every 3 seconds. Alternates between setting the HUMIDITY and 
+TEMPERATURE Eventflags to signal corresponding flags
+static boolean is used to track which event flag should be set. 
 
+Inputs: none 
+Outputs: none (sets appropriate event flag)
+*/
 void ISR_sensor(){
     static bool humidity_status = true;
 
@@ -188,6 +235,14 @@ void ISR_sensor(){
     humidity_status = !humidity_status;
 }
 
+/* reading temperature 
+thread that waits for the TEMPERATURE event flag before requesting a measurement from the 
+sensor. Calls read_sensor() to obtain the temp, turns on the red LED, and prints the measurment 
+or error response to terminal. Mutex protects USBSerial. 
+
+inputs: none
+outputs: none (displays temp measurements or error message through USBSerial and controls Red LED)
+*/
 void read_temperature(){
     while(true){
         Temperature_event_flag.wait_any(TEMPERATURE);
@@ -219,6 +274,14 @@ void read_temperature(){
     }
 }
 
+/* reading humidity
+thread that waits for the HUMIDITY event flag before requesting a measurement from the 
+sensor. Calls read_sensor() to obtain the humidity, turns on the green LED, and prints the measurment 
+or error response to terminal. Mutex protects USBSerial. 
+
+inputs: none
+outputs: none (displays humidity measurements or error message through USBSerial and controls green LED)
+*/
 void read_humidity(){
     while(true){
         Humidity_event_flag.wait_any(HUMIDITY);
@@ -251,7 +314,11 @@ void read_humidity(){
 
 //
 
-// main() runs in its own thread in the OS
+/*main
+Starts the temperature and humidity threads and attaches the ISR to the ticker. 
+
+inputs: none
+*/
 int main()
 {
     *P0_DIR |= GREEN_LED | RED_LED;
